@@ -1,6 +1,21 @@
 (in-package :app)
 
-(defvar *acceptor* (make-instance 'hunchentoot:easy-acceptor :port 4242))
+(defun listen-port ()
+  (let ((port (uiop:getenvp "WEBAPP_PORT")))
+    (if port
+        port 
+        4242)))
+
+(defun listen-address ()
+  (let ((address (uiop:getenvp "WEBAPP_ADDRESS")))
+    (if address
+        address
+        nil)))
+
+(defvar *acceptor* (make-instance 'hunchentoot:easy-acceptor
+                                  :port (listen-port)
+                                  :address (listen-address)))
+
 (defun hostname ()
   (machine-instance))
 
@@ -11,6 +26,9 @@
   (hunchentoot:start *acceptor*))
 
 (defun main ()
+  ;; Have sigterm do the same thing as sigint which is to signal
+  ;; sb-sys:interactive-interrupt and allow us to cleanup nicely.
+  (sb-unix::%install-handler sb-unix::sigterm #'sb-unix::sigint-handler)
   (start)
   ;; Hunchentoot runs as a background thread so pause the main
   ;; thread until the background threads exit
